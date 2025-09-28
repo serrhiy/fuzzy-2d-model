@@ -18,6 +18,8 @@ INTERVALS_OUTPUTS_NUMBER = 9
 
 def get_plots(nrows, ncols) -> tuple[Figure, Axes, Axes]:
     window, axs = pyplot.subplots(nrows, ncols)
+    if nrows == 1 and ncols == 1:
+        return window, axs
     return window, *axs
 
 
@@ -44,6 +46,14 @@ def get_best_functions_index(value, means, diff):
     return index
 
 
+def MSE(real: numpy.ndarray, model: numpy.ndarray) -> float:
+    return numpy.mean((real - model) ** 2)
+
+
+def MAE(real: numpy.ndarray, model: numpy.ndarray) -> float:
+    return abs(numpy.mean(real - model))
+
+
 def main():
     x, y, z = get_original_values()
 
@@ -58,6 +68,10 @@ def main():
     window2, xt_axes, yt_axes, zt_axes = get_plots(1, 3)
     window2.set_size_inches(from_pixels_to_inches(WINDOW_SIZE, window))
     window2.canvas.manager.set_window_title("Trimf functions")
+
+    window3, zo_axes = get_plots(1, 1)
+    window3.set_size_inches(from_pixels_to_inches(WINDOW_SIZE, window))
+    window3.canvas.manager.set_window_title("Z output")
 
     x_means = numpy.linspace(min(x), max(x), INTERVALS_INPUTS_NUMBER)
     y_means = numpy.linspace(min(y), max(y), INTERVALS_INPUTS_NUMBER)
@@ -105,20 +119,45 @@ def main():
     for y_mean in y_means:
         row = [round(y_mean, 2)]
         for x_mean in x_means:
-            row.append(round(0.5 * sin(x_mean + y_mean) * cos(y_mean), 2))
+            z_value = 0.5 * sin(x_mean + y_mean) * cos(y_mean)
+            row.append(round(z_value, 2))
         table.append(row)
     print(tabulate(table, tablefmt="grid"))
 
     print("Table of functions name")
     table = [["x/y"] + ["mx" + str(i + 1) for i in range(len(x_means))]]
+    rules = {}
     for y_index, y_mean in enumerate(y_means):
         row = ["my" + str(y_index + 1)]
-        for x_mean in x_means:
+        for x_index, x_mean in enumerate(x_means):
             z_value = 0.5 * sin(x_mean + y_mean) * cos(y_mean)
             best_functions_index = get_best_functions_index(z_value, z_means, z_delta)
             row.append("mf" + str(best_functions_index + 1))
+            rules[(x_index, y_index)] = best_functions_index
         table.append(row)
     print(tabulate(table, tablefmt="grid"))
+
+    for (x_number, y_number), z_number in rules.items():
+        print(
+            f"if (x is mx{x_number + 1}) and (y is my{y_number + 1}) then (z is mf{z_number + 1})"
+        )
+
+    z_output = []
+    for x_value in x:
+        y_value = cos(x_value / 2) + sin(x_value / 3)
+        best_x = get_best_functions_index(x_value, x_means, x_delta)
+        best_y = get_best_functions_index(y_value, y_means, y_delta)
+        best_z = rules[(best_x, best_y)]
+        z_output.append(z_means[best_z])
+    zo_axes.plot(x, z_output, label="Model")
+    zo_axes.plot(x, z, label="True")
+    zo_axes.legend()
+
+    mean_squared_error = MSE(y, z_output)
+    mean_absolute_error = MAE(y, z_output)
+
+    print(f"Mean Squared Error {mean_squared_error}")
+    print(f"Mean Absolute Error {mean_absolute_error}")
 
     pyplot.show()
 
