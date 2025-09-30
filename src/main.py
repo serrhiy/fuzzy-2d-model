@@ -133,41 +133,35 @@ def diagonal_model(x, y, z, x_means, y_means, z_means):
 
     print("Table of functions name")
     table = [["x/y"] + ["mx" + str(i + 1) for i in range(len(x_means))]]
-    rules = {}
+    rules = []
     for i in range(len(x_means)):
         x_mean, y_mean = x_means[i], y_means[i]
         z_value = calculate_z(x_mean, y_mean)
         best_functions_index = get_best_functions_index_gaussian(
             z_value, z_means, z_sigma
         )
-        row = ["my" + str(i + 1)] + ["mf" + str(best_functions_index + 1)] * len(
-            x_means
-        )
+        row = [""] * (len(x_means) + 1)
+        row[0] = f"my{i + 1}"
+        row[i + 1] = f"mf{best_functions_index + 1}"
         table.append(row)
-        for j in range(len(x_means)):
-            rules[(j, i)] = best_functions_index
+        rules.append(best_functions_index)
     print(tabulate(table, tablefmt="grid"))
 
-    for (x_number, y_number), z_number in rules.items():
-        print(
-            f"if (x is mx{x_number + 1}) and (y is my{y_number + 1}) then (z is mf{z_number + 1})"
-        )
+    for index, z_number in enumerate(rules):
+        print(f"if (x is mx{index + 1}) and (y is my{index + 1}) then (z is mf{z_number + 1})")
 
     z_output = []
+    x_output = []
     for x_value in x:
         y_value = calculate_y(x_value)
         best_x = get_best_functions_index_gaussian(x_value, x_means, x_sigma)
         best_y = get_best_functions_index_gaussian(y_value, y_means, y_sigma)
-        best_z = rules[(best_x, best_y)]
-        z_output.append(z_means[best_z])
-    zo_axes.plot(x, z_output, label="Model")
+        if best_x == best_y:
+            x_output.append(x_value)
+            z_output.append(z_means[rules[best_x]])
+    zo_axes.plot(x_output, z_output, label="Model")
     zo_axes.plot(x, z, label="True")
     zo_axes.legend()
-
-    mse = mean_squared_error(z, z_output)
-    mae = mean_absolute_error(z, z_output)
-    print(f"Mean Squared Error {mse}")
-    print(f"Mean Absolute Error {mae}")
 
 
 def trapmf_model(x, y, z, x_means, y_means, z_means):
@@ -403,7 +397,7 @@ def main():
     xy_axes.set_title("y")
     xz_axes.set_title("z")
 
-    diagonal_model(x, y, z, x_means, y_means, z_means)
+    gaussian_model(x, y, z, x_means, y_means, z_means)
 
     pyplot.show()
 
